@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # $Author: markdolson $ Mark Olson
-# $Revision: 108 $
-# $Date: 2015-09-11 12:47:08 -0700 (Fri, 11 Sep 2015) $
-# $HeadURL: http://192.168.1.197/svn/mdoCode/trunk/SharksAndLasers/31_SharksAndLasers.py $
+# $Revision: 156 $
+# $Date: 2016-01-31 14:25:59 -0800 (Sun, 31 Jan 2016) $
+# $HeadURL: http://192.168.1.172/svn/mdoCodeRepo/trunk/SharksAndLasers/31_SharksAndLasers.py $
 #
 # This code was developed by Mark Olson in 2015. 
 # It has been run on a Raspberry PI 2 but is by no means completely debugged.
@@ -38,6 +38,11 @@
 # is on. The Bond should be off when the laser is off; when the laser is on and
 # the garage door is fully open Bond obstructs the laser and it is off; otherwise
 # Bond is on.
+#
+# There is an IR detector www.osepp.com IRDET-01 3 pin-outs: G-Ground V-5V S-Signal
+# When signal returns 1 then something is close, which means the door is open
+# There are two potentiometers: near G adjusts frequency and near S adjusts distance
+# For distance, turn counter-clockwise to decrease the distance.
 #
 # Also there are "hall effect" magnetic sensors; both off when the garage door is
 # in between else either HallSensorClosed or HallSensorOpen for full closed or open.
@@ -96,18 +101,20 @@ sms_phone_two = "";
 #   for example: LaserBond, LaserCheck and OpenerLight are all LightDetect
 #      but have individual pins
 #
-GPIO_gpio_LaserBond = 22;
-GPIO_gpio_LaserCheck = 27;
-GPIO_gpio_OpenerLight = 17;
-GPIO_gpio_HallSensorClosed = 12;
-GPIO_gpio_HallSensorOpen = 16;
-GPIO_gpio_SelfDestruct = 25;
+GPIO_gpio_LaserBond = 22; # RPi2 pin number 15
+GPIO_gpio_LaserCheck = 27; # RPi2 pin number 13
+GPIO_gpio_OpenerLight = 17; # RPi2 pin number 11
+GPIO_gpio_IRDetector = 05; # RPi2 pin number 29
+GPIO_gpio_HallSensorClosed = 12; # RPi2 pin number 32
+GPIO_gpio_HallSensorOpen = 16; # RPi2 pin number 36
+GPIO_gpio_SelfDestruct = 25; # RPi2 pin number 22
 #
 # GPIO sensor values that represent on
 #   these are organized by sensor type
 #   for example: LaserBond, LaserCheck and OpenerLight are all LightDetect
 #
 GPIO_ON_LightDetect = 1;
+GPIO_ON_IRDetect = 0;
 GPIO_ON_HallDetect = 0;
 WIFI_NAS_ON_Detect = 1;
 WIFI_HTTP_ON_Detect = 1;
@@ -118,9 +125,9 @@ GPIO_ON_SelfDestruct = 0;
 #   for example: RELAY1 and RELAY2 are relay outputs
 #      but have individual pins
 #
-GPIO_gpio_RELAY1 = 23;
-GPIO_gpio_RELAY2 = 24;
-GPIO_gpio_LASER = 4;
+GPIO_gpio_RELAY1 = 23; # RPi2 pin number 16
+GPIO_gpio_RELAY2 = 24; # RPi2 pin number 18
+GPIO_gpio_LASER = 04; # RPi2 pin number 7
 #
 # GPIO output value definitions
 #   these are organized by output type
@@ -141,6 +148,7 @@ GPIO_DE_ENERGIZE_LASER = 0;
 #       laser-ON or laser-OFF to determine if they are
 #       malfunctioning.
 #   independently: hall sensors also detect garage door position
+#   also independently: InfraRed sensor detects garage door in the CLOSED position
 #
 #   the raw I/O value (ex: GPIO) is not stored in this table
 #   the val-canonical is "1" if raw I/O val == ON-val; otherwise "0"
@@ -153,18 +161,19 @@ GPIO_DE_ENERGIZE_LASER = 0;
 #    name, val-canonical, IO-type, IO-gpio, ON-val, NOM-val, OffsetTop, OffsetLeft
 #
 status_list = [ 
-    'Bond_laser_on', 101, 'LASER_ON_GPIO', GPIO_gpio_LaserBond, GPIO_ON_LightDetect, 1, 400, 260,
-    'LaserCheck_laser_on', 101, 'LASER_ON_GPIO', GPIO_gpio_LaserCheck, GPIO_ON_LightDetect, 1, 280, 160,
-    'Bond_laser_off', 101, 'GPIO', GPIO_gpio_LaserBond, GPIO_ON_LightDetect, 0, 400, 320,
-    'LaserCheck_laser_off', 101, 'GPIO', GPIO_gpio_LaserCheck, GPIO_ON_LightDetect, 0, 280, 220,
-    'HallSensorClosed', 101, 'GPIO', GPIO_gpio_HallSensorClosed, GPIO_ON_HallDetect, 1, 90, 160,
-    'HallSensorOpen', 100, 'GPIO', GPIO_gpio_HallSensorOpen, GPIO_ON_HallDetect, 0, 210, 160,
-    'OpenerLight', 100, 'GPIO', GPIO_gpio_OpenerLight, GPIO_ON_LightDetect, 0, 1, 160,
-    'NASavailable', 101, 'WIFI_NAS', 'WIFI_NAS', WIFI_NAS_ON_Detect, 1, 210, 340,
-    'HTTPavailable', 101, 'WIFI_HTTP', 'WIFI_HTTP', WIFI_HTTP_ON_Detect, 1, 210, 400,
-    'SelfDestruct', 101, 'GPIO', GPIO_gpio_SelfDestruct, GPIO_ON_SelfDestruct, 0, 20, 280 ];
+    'Bond_laser_on', 101, 'LASER_ON_GPIO', GPIO_gpio_LaserBond, GPIO_ON_LightDetect, 1, 400, 260,"CHECK.png","ECKS.png",
+    'LaserCheck_laser_on', 101, 'LASER_ON_GPIO', GPIO_gpio_LaserCheck, GPIO_ON_LightDetect, 1, 280, 160,"CHECK.png","ECKS.png",
+    'Bond_laser_off', 101, 'GPIO', GPIO_gpio_LaserBond, GPIO_ON_LightDetect, 0, 400, 320,"CHECK.png","ECKS.png",
+    'LaserCheck_laser_off', 101, 'GPIO', GPIO_gpio_LaserCheck, GPIO_ON_LightDetect, 0, 280, 220,"CHECK.png","ECKS.png",
+    'IRDetect_open', 101, 'GPIO', GPIO_gpio_IRDetector, GPIO_ON_IRDetect, 1, 0, 0,"IR_OPN.png","IR_CLS.png",
+    'HallSensorClosed', 101, 'GPIO', GPIO_gpio_HallSensorClosed, GPIO_ON_HallDetect, 1, 90, 160,"CHECK.png","ECKS.png",
+    'HallSensorOpen', 100, 'GPIO', GPIO_gpio_HallSensorOpen, GPIO_ON_HallDetect, 0, 210, 160,"CHECK.png","ECKS.png",
+    'OpenerLight', 100, 'GPIO', GPIO_gpio_OpenerLight, GPIO_ON_LightDetect, 0, 1, 160,"CHECK.png","ECKS.png",
+    'NASavailable', 101, 'WIFI_NAS', 'WIFI_NAS', WIFI_NAS_ON_Detect, 1, 210, 340,"CHECK.png","ECKS.png",
+    'HTTPavailable', 101, 'WIFI_HTTP', 'WIFI_HTTP', WIFI_HTTP_ON_Detect, 1, 210, 400,"CHECK.png","ECKS.png",
+    'SelfDestruct', 101, 'GPIO', GPIO_gpio_SelfDestruct, GPIO_ON_SelfDestruct, 0, 20, 280, "CHECK.png","ECKS.png" ];
 #
-status_numElements = 8;
+status_numElements = 10;
 status_entryName = 0;
 status_entryVal = 1;
 status_entryType = 2;
@@ -173,6 +182,8 @@ status_entryOnVal = 4;
 status_entryNominalVal = 5;
 status_entryHtmlTop = 6;
 status_entryHtmlLeft = 7;
+status_entryImgMatch = 8;
+status_entryImgNoMatch = 9;
 #
 # compare_list
 #
@@ -195,6 +206,7 @@ compare_open = [
     'LaserCheck_laser_on', 1,
     'Bond_laser_off', 0,
     'LaserCheck_laser_off', 0,
+    'IRdetect_open', 1,
     'HallSensorClosed', 0,
     'HallSensorOpen', 1];
 compare_closed = [
@@ -202,6 +214,7 @@ compare_closed = [
     'LaserCheck_laser_on', 1,
     'Bond_laser_off', 0,
     'LaserCheck_laser_off', 0,
+    'IRdetect_closed', 0,
     'HallSensorClosed', 1,
     'HallSensorOpen', 0];
 compare_moving = [
@@ -266,7 +279,7 @@ list_of_compares = [
 # initialize_HW()
 #
 # Make sure the GPIO pins are ready:
-# Use GPIO numbers (BCM) not pin numbers (BOARD)
+# Use setmode for GPIO numbers (BCM) not pin numbers (BOARD)
 #
 # initialize sound hardware
 #
@@ -291,6 +304,7 @@ def initialize_HW():
     GPIO.setup(GPIO_gpio_LaserBond, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(GPIO_gpio_LaserCheck, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(GPIO_gpio_OpenerLight, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(GPIO_gpio_IRDetector, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(GPIO_gpio_HallSensorClosed, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(GPIO_gpio_HallSensorOpen, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(GPIO_gpio_SelfDestruct, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -651,10 +665,11 @@ def write_html(the_status, my_curr_string, my_status_curr, my_prev_string, my_st
     HTML.write("<div style=\"position:relative; left:0; top:20;\">\n");
     HTML.write("  <img src=\"images/SharksAndLasersPlan.png\" style=\"position:relative; top:0; left:0;\"/>\n");
     for ndx in range(0, len(the_status), status_numElements):
+
         if (the_status[ndx+status_entryVal] == the_status[ndx+status_entryNominalVal]):
-            HTML.write("  <img src=\"images/CHECK.png\" style=\"position:absolute; top:%d; left:%d;\"/>\n" % (the_status[ndx+status_entryHtmlTop], the_status[ndx+status_entryHtmlLeft]));
+            HTML.write("  <img src=\"images/%s\" style=\"position:absolute; top:%d; left:%d;\"/>\n" % (the_status[ndx+status_entryImgMatch],the_status[ndx+status_entryHtmlTop], the_status[ndx+status_entryHtmlLeft]));
         else:
-            HTML.write("  <img src=\"images/ECKS.png\" style=\"position:absolute; top:%d; left:%d;\"/>\n" % (the_status[ndx+status_entryHtmlTop], the_status[ndx+status_entryHtmlLeft]));
+            HTML.write("  <img src=\"images/%s\" style=\"position:absolute; top:%d; left:%d;\"/>\n" % (the_status[ndx+status_entryImgNoMatch],the_status[ndx+status_entryHtmlTop], the_status[ndx+status_entryHtmlLeft]));
     HTML.write("</div><br>\n");
     # go backward for num_web_lines entries
     ndx = (loglines_ndx - 1 + loglines_num) % loglines_num;
