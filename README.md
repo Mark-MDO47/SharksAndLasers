@@ -1,6 +1,9 @@
 SharksAndLasers
 Mark's Garage Door Closer Sharks and Lasers Project
 
+![alt text](https://github.com/Mark-MDO47\SharksAndLasers\forFun\Board_AllTogether.JPG "Sharks & Lasers project mocked up")
+![alt text](https://github.com/Mark-MDO47\SharksAndLasers\forFun\BondFigurines.JPG "James Bond figurines from Portugal via EBay")
+
 This code supports a personal garage door monitor project for Mark Olson.
 It involves lasers and light detectors to monitor garage door position.
 The laser goes through a beam splitter and then to two light detector targets:
