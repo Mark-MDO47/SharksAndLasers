@@ -2,6 +2,7 @@ SharksAndLasers
 Mark's Garage Door Closer Sharks and Lasers Project
 
 ![alt text](https://github.com/Mark-MDO47/SharksAndLasers/blob/master/forFun/Board_AllTogether.png "Sharks & Lasers project mocked up")
+![alt text](https://github.com/Mark-MDO47/SharksAndLasers/blob/master/images/SharksAndLasersPlan_small.png "Sharks & Lasers project plan")
 ![alt text](https://github.com/Mark-MDO47/SharksAndLasers/blob/master/forFun/BondFigurines.png "James Bond figurines from Portugal via EBay")
 
 This code supports a personal garage door monitor project for Mark Olson.
