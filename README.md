@@ -42,8 +42,19 @@ We create two simple web pages and try to keep the webserver operating
 if we notice it died. The webpages give status. One for a cell phone,
 one for a large screen.
 
-why Bond?
+Why Bond?
 Because where there are lasers, there must be sharks, and therefore there
 must be sharks shooting lasers at James Bond, and there must be a self-destruct
 button. That much is clear.
 
+The original James Bond laser scene
+* https://www.youtube.com/watch?v=DoQwKe0lggw
+
+The original James Bond shark scene
+* https://www.youtube.com/watch?v=JPDhxTbWjuc
+
+The first Austin Powers sharks with lasers scene
+* https://www.youtube.com/watch?v=Bh7bYNAHXxw
+
+The second Austin Powers sharks with lasers scene
+* https://www.youtube.com/watch?v=Nh5Lh-tTSZQ
